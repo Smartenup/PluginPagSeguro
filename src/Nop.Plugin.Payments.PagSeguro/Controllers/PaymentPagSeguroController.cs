@@ -157,7 +157,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
 
                 try
                 {
-                    transactionPagSeguro = NotificationService.CheckTransaction(credentials, notificationCode.Trim().ToUpper(), false);
+                    transactionPagSeguro = NotificationService.CheckTransaction(credentials, notificationCode.Trim().ToUpper());
 
                     transactionMessage.AppendFormat("Tipo: {0} ", transactionPagSeguro.TransactionType);
                     transactionMessage.AppendFormat("Status: {0} ", transactionPagSeguro.TransactionStatus);
