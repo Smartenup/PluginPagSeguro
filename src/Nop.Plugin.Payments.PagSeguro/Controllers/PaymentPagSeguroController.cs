@@ -222,6 +222,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                         _orderProcessingService.MarkAsAuthorized(_order);
                         AddOrderNote("Pagamento aprovado.", true, ref _order);
                         AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref _order);
+                        AddOrderNote("Aguardando Impressão - Excluir esse comentário ao imprimir ", false, ref _order);
                         break;
                     case 4:
                         _orderProcessingService.MarkOrderAsPaid(_order);
@@ -288,17 +289,17 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
             return paymentMethodType;
         }
 
-        [NonAction]
-        //Adiciona anotaçoes ao pedido
-        private void AddOrderNote(string note, bool showNoteToCustomer, ref Order order)
-        {
-            OrderNote orderNote = new OrderNote();
-            orderNote.CreatedOnUtc = DateTime.UtcNow;
-            orderNote.DisplayToCustomer = showNoteToCustomer;
-            orderNote.Note = note;
-            order.OrderNotes.Add(orderNote);
+            [NonAction]
+            //Adiciona anotaçoes ao pedido
+            private void AddOrderNote(string note, bool showNoteToCustomer, ref Order order)
+            {
+                OrderNote orderNote = new OrderNote();
+                orderNote.CreatedOnUtc = DateTime.UtcNow;
+                orderNote.DisplayToCustomer = showNoteToCustomer;
+                orderNote.Note = note;
+                order.OrderNotes.Add(orderNote);
 
-            this._orderService.UpdateOrder(order);
-        }
+                this._orderService.UpdateOrder(order);
+            }
     }
 }
