@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Text.RegularExpressions;
-using System.Web;
-using System.Web.Routing;
-using Nop.Core;
+﻿using Nop.Core;
 using Nop.Core.Domain;
 using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Orders;
@@ -19,6 +13,12 @@ using Nop.Services.Directory;
 using Nop.Services.Localization;
 using Nop.Services.Payments;
 using Nop.Services.Tax;
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Text.RegularExpressions;
+using System.Web;
+using System.Web.Routing;
 using Uol.PagSeguro.Constants;
 using Uol.PagSeguro.Domain;
 using Uol.PagSeguro.Exception;
@@ -57,6 +57,8 @@ namespace Nop.Plugin.Payments.PagSeguro
             _storeInformationSettings = storeInformationSettings;
             _addressAttributeParser = addressAttributeParser;
             _workContext = workContext;
+
+
         }
 
         #endregion
@@ -76,7 +78,7 @@ namespace Nop.Plugin.Payments.PagSeguro
         private readonly IWorkContext _workContext;
 
         private const int PHONE_WITHOUT_AREA_CODE_MAX_LENGTH = 9;
-        private const int PHONE_ONLY_NUMBER_ONE_MAX_SIZE = 11;
+        private const int PHONE_ONLY_NUMBER_ONE_MAX_SIZE = 11;        
 
         #endregion
 
@@ -101,7 +103,11 @@ namespace Nop.Plugin.Payments.PagSeguro
         public void PostProcessPayment(PostProcessPaymentRequest postProcessPaymentRequest)
         {
             var returnToken = string.Empty;
+
+            Uol.PagSeguro.Resources.PagSeguroConfiguration.UrlXmlConfiguration = HttpRuntime.AppDomainAppPath + "\\Plugins\\Payments.PagSeguro\\Configuration\\PagSeguroConfig.xml";
+
             var credentials = new AccountCredentials(_pagSeguroPaymentSettings.Email, _pagSeguroPaymentSettings.Token);
+
             try
             {
                 var payment = new PaymentRequest();
@@ -219,6 +225,7 @@ namespace Nop.Plugin.Payments.PagSeguro
 
                 if (paymentRedirectUri == null)
                     throw new NopException("Erro ao gerar transação no PagSeguro. Uri nula.");
+
                 HttpContext.Current.Response.Redirect(paymentRedirectUri.ToString());
             }
             catch (PagSeguroServiceException exception)
@@ -548,7 +555,6 @@ namespace Nop.Plugin.Payments.PagSeguro
 
                 ///TODO:Validar os codigo de áreas validos e caso não for retirar da do telefone
             }
-
 
             return completeFoneNumber;
         }

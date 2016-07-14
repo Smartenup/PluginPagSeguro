@@ -41,7 +41,6 @@ C:\Users\1055T\ImperioDaDanca\nopCommerce_3.70_Source\Presentation\Nop.Web\Plugi
 C:\Users\1055T\ImperioDaDanca\nopCommerce_3.70_Source\Plugins\Nop.Plugin.Payments.PagSeguro\obj\Release\Nop.Plugin.Payments.PagSeguro.csprojResolveAssemblyReference.cache
 C:\Users\1055T\ImperioDaDanca\nopCommerce_3.70_Source\Plugins\Nop.Plugin.Payments.PagSeguro\obj\Release\Nop.Plugin.Payments.PagSeguro.dll
 C:\Users\1055T\ImperioDaDanca\nopCommerce_3.70_Source\Plugins\Nop.Plugin.Payments.PagSeguro\obj\Release\Nop.Plugin.Payments.PagSeguro.pdb
-C:\Users\uiska\Documents\Visual Studio 2015\Projects\PluginPagSeguro\src\Nop.Plugin.Payments.PagSeguro\obj\Release\Nop.Plugin.Payments.PagSeguro.csprojResolveAssemblyReference.cache
 C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Plugins\Nop.Plugin.Payments.PagSeguro\logo.jpg
 C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Plugins\Nop.Plugin.Payments.PagSeguro\Views\PaymentPagSeguro\Configure.cshtml
 C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Plugins\Nop.Plugin.Payments.PagSeguro\Views\PaymentPagSeguro\PaymentInfo.cshtml
@@ -51,8 +50,6 @@ C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Plu
 C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Plugins\Nop.Plugin.Payments.PagSeguro\Nop.Plugin.Payments.PagSeguro.dll.config
 C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Plugins\Nop.Plugin.Payments.PagSeguro\Nop.Plugin.Payments.PagSeguro.dll
 C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Plugins\Nop.Plugin.Payments.PagSeguro\Nop.Plugin.Payments.PagSeguro.pdb
-C:\Users\uiska\Documents\Visual Studio 2015\Projects\PluginPagSeguro\src\Nop.Plugin.Payments.PagSeguro\obj\Release\Nop.Plugin.Payments.PagSeguro.dll
-C:\Users\uiska\Documents\Visual Studio 2015\Projects\PluginPagSeguro\src\Nop.Plugin.Payments.PagSeguro\obj\Release\Nop.Plugin.Payments.PagSeguro.pdb
 C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Presentation\Nop.Web\Plugins\Payments.PagSeguro\logo.jpg
 C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Presentation\Nop.Web\Plugins\Payments.PagSeguro\Views\PaymentPagSeguro\Configure.cshtml
 C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Presentation\Nop.Web\Plugins\Payments.PagSeguro\Views\PaymentPagSeguro\PaymentInfo.cshtml
@@ -62,3 +59,6 @@ C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Pre
 C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Presentation\Nop.Web\Plugins\Payments.PagSeguro\Nop.Plugin.Payments.PagSeguro.dll.config
 C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Presentation\Nop.Web\Plugins\Payments.PagSeguro\Nop.Plugin.Payments.PagSeguro.dll
 C:\Users\uiska\Documents\Visual Studio 2015\Projects\nopCommerce_3.70_Source\Presentation\Nop.Web\Plugins\Payments.PagSeguro\Nop.Plugin.Payments.PagSeguro.pdb
+C:\Users\uiska\Documents\Visual Studio 2015\Projects\PluginPagSeguro\src\Nop.Plugin.Payments.PagSeguro\obj\Release\Nop.Plugin.Payments.PagSeguro.csprojResolveAssemblyReference.cache
+C:\Users\uiska\Documents\Visual Studio 2015\Projects\PluginPagSeguro\src\Nop.Plugin.Payments.PagSeguro\obj\Release\Nop.Plugin.Payments.PagSeguro.dll
+C:\Users\uiska\Documents\Visual Studio 2015\Projects\PluginPagSeguro\src\Nop.Plugin.Payments.PagSeguro\obj\Release\Nop.Plugin.Payments.PagSeguro.pdb

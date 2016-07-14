@@ -13,9 +13,11 @@ using Nop.Web.Framework.Security;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Web;
 using System.Web.Mvc;
 using Uol.PagSeguro.Domain;
 using Uol.PagSeguro.Exception;
+using Uol.PagSeguro.Resources;
 using Uol.PagSeguro.Service;
 
 namespace Nop.Plugin.Payments.PagSeguro.Controllers
@@ -49,7 +51,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
             this._orderProcessingService = orderProcessingService;
             this._logger = logger;
             this._localizationService = localizationService;
-            this._pagSeguroPaymentSettings = pagSeguroPaymentSettings;
+            this._pagSeguroPaymentSettings = pagSeguroPaymentSettings;           
 
         }
 
@@ -145,6 +147,8 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                 //Monta as credenciais
                 var email = _pagSeguroPaymentSettings.Email;
                 var token = _pagSeguroPaymentSettings.Token;
+
+                PagSeguroConfiguration.UrlXmlConfiguration = HttpRuntime.AppDomainAppPath + "\\Plugins\\Payments.PagSeguro\\Configuration\\PagSeguroConfig.xml";
 
                 AccountCredentials credentials = new AccountCredentials(email, token);
 
