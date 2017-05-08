@@ -10,5 +10,6 @@ namespace Nop.Plugin.Payments.PagSeguro
         public decimal ValorFrete { get; set; }
         public string UrlPagSeguro { get; set; }
         public string UrlPagSeguroSandbox { get; set; }
+        public bool AdicionarNotaPrazoFabricaoEnvio { get; set; }
     }
 }

@@ -1,17 +1,22 @@
 ﻿using Nop.Core;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Payments;
+using Nop.Core.Domain.Shipping;
 using Nop.Plugin.Payments.PagSeguro.Models;
 using Nop.Services.Configuration;
 using Nop.Services.Localization;
 using Nop.Services.Logging;
+using Nop.Services.Messages;
 using Nop.Services.Orders;
 using Nop.Services.Payments;
+using Nop.Services.Shipping;
 using Nop.Services.Stores;
 using Nop.Web.Framework.Controllers;
 using Nop.Web.Framework.Security;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using System.Text;
 using System.Web;
 using System.Web.Mvc;
@@ -32,6 +37,8 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
         private readonly ILogger _logger;
         private readonly PagSeguroPaymentSettings _pagSeguroPaymentSettings;
         private readonly ILocalizationService _localizationService;
+        private readonly IWorkflowMessageService _workflowMessageService;
+        private readonly IShippingService _shippingService;
 
         public PaymentPagSeguroController(IWorkContext workContext,
             IStoreService storeService, 
@@ -42,16 +49,20 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
             ILogger logger, 
             PaymentSettings paymentSettings, 
             ILocalizationService localizationService,
-            PagSeguroPaymentSettings pagSeguroPaymentSettings)
+            PagSeguroPaymentSettings pagSeguroPaymentSettings,
+            IWorkflowMessageService workflowMessageService,
+            IShippingService shippingService)
         {
-            this._workContext = workContext;
-            this._storeService = storeService;
-            this._settingService = settingService;
-            this._orderService = orderService;
-            this._orderProcessingService = orderProcessingService;
-            this._logger = logger;
-            this._localizationService = localizationService;
-            this._pagSeguroPaymentSettings = pagSeguroPaymentSettings;           
+            _workContext = workContext;
+            _storeService = storeService;
+            _settingService = settingService;
+            _orderService = orderService;
+            _orderProcessingService = orderProcessingService;
+            _logger = logger;
+            _localizationService = localizationService;
+            _pagSeguroPaymentSettings = pagSeguroPaymentSettings;
+            _workflowMessageService = workflowMessageService;
+            _shippingService = shippingService;
 
         }
 
@@ -60,7 +71,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
         public ActionResult Configure()
         {
             //load settings for a chosen store scope
-            var storeScope = this.GetActiveStoreScopeConfiguration(_storeService, _workContext);
+            var storeScope = GetActiveStoreScopeConfiguration(_storeService, _workContext);
             var pagSeguroPaymentSettings = _settingService.LoadSetting<PagSeguroPaymentSettings>(storeScope);
             if (pagSeguroPaymentSettings == null) throw new ArgumentNullException(nameof(pagSeguroPaymentSettings));
 
@@ -68,6 +79,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
             var model = new ConfigurationModel();
             model.Email = pagSeguroPaymentSettings.Email;
             model.Token = pagSeguroPaymentSettings.Token;
+            model.AdicionarNotaPrazoFabricaoEnvio = pagSeguroPaymentSettings.AdicionarNotaPrazoFabricaoEnvio;
 
             return View("~/Plugins/Payments.PagSeguro/Views/PaymentPagSeguro/Configure.cshtml", model);
             
@@ -90,6 +102,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
             //save settings
             pagSeguroPaymentSettings.Email = model.Email;
             pagSeguroPaymentSettings.Token = model.Token;
+            pagSeguroPaymentSettings.AdicionarNotaPrazoFabricaoEnvio = model.AdicionarNotaPrazoFabricaoEnvio;
 
             _settingService.SaveSetting(pagSeguroPaymentSettings);
 
@@ -138,7 +151,8 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                 if (string.IsNullOrEmpty(notificationCode))
                 {
                     _logger.Error("Notificação PagSeguro recebida vazia. Abortando método ReturnPayment");
-                    return Content("");
+
+                    return new HttpStatusCodeResult(HttpStatusCode.InternalServerError);
                 }
                 else
                     _logger.Information("PagSeguro - NotificationCode:" + notificationCode);
@@ -152,9 +166,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
 
                 AccountCredentials credentials = new AccountCredentials(email, token);
 
-
-                Order _order = null;
-
+                Order order = null;
 
                 StringBuilder transactionMessage = new StringBuilder();
                 Transaction transactionPagSeguro = null;
@@ -179,22 +191,24 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                     {
                         transactionMessage.AppendFormat("{0}-{1}", item.Code, item.Message);
                     }
+
                     _logger.Error(transactionMessage.ToString(), ex);
 
-                    return Content("");
+                    return new HttpStatusCodeResult(HttpStatusCode.InternalServerError);
                 }
 
                 //Transacao do pagseguro encontrada, portanto vamos achar o pedido               
                 if (transactionPagSeguro.Reference.Length == 36)
-                    _order = _orderService.GetOrderByGuid(new Guid(transactionPagSeguro.Reference));
+                    order = _orderService.GetOrderByGuid(new Guid(transactionPagSeguro.Reference));
                 else
-                    _order = _orderService.GetOrderById(int.Parse(transactionPagSeguro.Reference));
+                    order = _orderService.GetOrderById(int.Parse(transactionPagSeguro.Reference));
 
 
-                if (_order == null)
+                if (order == null)
                 {
                     _logger.Information("Pedido não encontrado. Abortando. Pedido: " + transactionPagSeguro.Reference);
-                    return Content("");
+
+                    return new HttpStatusCodeResult(HttpStatusCode.InternalServerError);
                 }
 
                 string paymentMethodType = GetPaymentDescription(transactionPagSeguro);
@@ -212,42 +226,44 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                     //7	Cancelada: a transação foi cancelada sem ter sido finalizada.
 
                     case 1:
-                        _order.PaymentStatus = PaymentStatus.Pending;
-                        AddOrderNote("Aguardando pagamento.", true, ref _order);
-                        AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref _order);
+                        order.PaymentStatus = PaymentStatus.Pending;
+                        AddOrderNote("Aguardando pagamento.", true, ref order);
+                        AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref order);
                         break;
                     case 2:
-                        _order.PaymentStatus = PaymentStatus.Pending;
-                        AddOrderNote("Em processamento pelo PagSeguro.", true, ref _order);
-                        AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref _order);
+                        order.PaymentStatus = PaymentStatus.Pending;
+                        AddOrderNote("Em processamento pelo PagSeguro.", true, ref order);
+                        AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref order);
                         break;
                     case 3:
-                        _order.PaymentStatus = PaymentStatus.Authorized;
-                        _orderProcessingService.MarkAsAuthorized(_order);
-                        AddOrderNote("Pagamento aprovado.", true, ref _order);
-                        AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref _order);
-                        AddOrderNote("Aguardando Impressão - Excluir esse comentário ao imprimir ", false, ref _order);
+                        order.PaymentStatus = PaymentStatus.Authorized;
+                        _orderProcessingService.MarkAsAuthorized(order);
+                        AddOrderNote("Pagamento aprovado.", true, ref order);
+                        AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref order);
+                        AddOrderNote("Aguardando Impressão - Excluir esse comentário ao imprimir ", false, ref order);
+                        if (_pagSeguroPaymentSettings.AdicionarNotaPrazoFabricaoEnvio)
+                            AddOrderNote(GetOrdeNoteRecievedPayment(order), true, ref order, true);
                         break;
                     case 4:
-                        _orderProcessingService.MarkOrderAsPaid(_order);
-                        AddOrderNote("Pagamento disponível para saque no PagSeguro.", false, ref _order);
+                        _orderProcessingService.MarkOrderAsPaid(order);
+                        AddOrderNote("Pagamento disponível para saque no PagSeguro.", false, ref order);
                         break;
                     case 5:
-                        _order.PaymentStatus = PaymentStatus.Voided;
-                        _orderService.UpdateOrder(_order);
-                        AddOrderNote("Em disputa: o comprador, dentro do prazo de liberação da transação, abriu uma disputa.", true, ref _order);
+                        order.PaymentStatus = PaymentStatus.Voided;
+                        _orderService.UpdateOrder(order);
+                        AddOrderNote("Em disputa: o comprador, dentro do prazo de liberação da transação, abriu uma disputa.", true, ref order, true);
                         break;
                     case 6:
-                        _order.PaymentStatus = PaymentStatus.Refunded;
-                        _order.OrderStatus = OrderStatus.Cancelled;
-                        _orderProcessingService.CancelOrder(_order, true);
-                        AddOrderNote("Valor reembolsado para o comprador. Pedido Cancelado.", true, ref _order);
+                        order.PaymentStatus = PaymentStatus.Refunded;
+                        order.OrderStatus = OrderStatus.Cancelled;
+                        _orderProcessingService.CancelOrder(order, true);
+                        AddOrderNote("Valor reembolsado para o comprador. Pedido Cancelado.", true, ref order, true);
                         break;
                     case 7:
-                        _order.PaymentStatus = PaymentStatus.Voided;
-                        _order.OrderStatus = OrderStatus.Cancelled;
-                        _orderProcessingService.CancelOrder(_order, true);
-                        AddOrderNote("Transação Cancelada. Motivos: Expiração do prazo de pagamento ou cancelada pelo comprador.", true, ref _order);
+                        order.PaymentStatus = PaymentStatus.Voided;
+                        order.OrderStatus = OrderStatus.Cancelled;
+                        _orderProcessingService.CancelOrder(order, true);
+                        AddOrderNote("Transação Cancelada. Motivos: Expiração do prazo de pagamento ou cancelada pelo comprador.", true, ref order);
                         break;
                 }
 
@@ -258,10 +274,136 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                 string erro = string.Format("Erro PagSeguro - {0}", ex.Message.ToString());
 
                 _logger.Error(erro, ex);
+
+                return new HttpStatusCodeResult(HttpStatusCode.InternalServerError);
             }
 
-            return Content("");
+            return new HttpStatusCodeResult(HttpStatusCode.OK); ;
         }
+
+
+        [NonAction]
+        private string GetOrdeNoteRecievedPayment(Nop.Core.Domain.Orders.Order order)
+        {
+            Nop.Core.Domain.Orders.OrderItem orderItem;
+            int? biggestAmountDays;
+
+            DeliveryDate biggestDeliveryDate = GetBiggestDeliveryDate(order, out biggestAmountDays, out orderItem);
+
+            DateTime dateShipment = DateTime.Now.AddWorkDays(biggestAmountDays.Value);
+
+            var str = new StringBuilder();
+
+            str.AppendLine("Recebemos a liberação do pagamento pelo PagSeguro e será dado andamento no seu pedido.");
+            str.AppendLine();
+            str.AppendFormat("Lembramos que o maior prazo é da fabricante {0} de {1}",
+                            orderItem.Product.ProductManufacturers.FirstOrDefault().Manufacturer.Name,
+                            biggestDeliveryDate.GetLocalized(dd => dd.Name));
+            str.AppendLine();
+            str.AppendLine();
+            str.AppendLine("*OBS: Caso o seu pedido tenha produtos com prazos diferentes, o prazo de entrega a ser considerado será o maior.");
+            str.AppendLine();
+
+
+            str.AppendFormat("Data máxima para postar nos correios: {0}", dateShipment.ToString("dd/MM/yyyy"));
+            str.AppendLine();
+
+            if (order.ShippingMethod.Contains("PAC") || order.ShippingMethod.Contains("SEDEX"))
+            {
+                try
+                {
+                    var shippingOption = _shippingService.GetShippingOption(order);
+
+                    str.AppendFormat("Correios: {0} - {1} após a postagem", shippingOption.Name, shippingOption.Description);
+                    str.AppendLine();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("Erro no calculo do frete pela ordem", ex);
+                }
+                finally
+                {
+                    str.AppendLine();
+                }
+            }
+
+            return str.ToString();
+
+        }
+
+        [NonAction]
+        private DeliveryDate GetBiggestDeliveryDate(Nop.Core.Domain.Orders.Order order, out int? biggestAmountDays,
+    out Nop.Core.Domain.Orders.OrderItem orderItem)
+        {
+
+            DeliveryDate deliveryDate = null;
+
+            biggestAmountDays = 0;
+
+            orderItem = null;
+
+            foreach (var item in order.OrderItems)
+            {
+                var deliveryDateItem = _shippingService.GetDeliveryDateById(item.Product.DeliveryDateId);
+
+                string deliveryDateText = deliveryDateItem.GetLocalized(dd => dd.Name);
+
+                int? deliveryBigestInteger = GetBiggestInteger(deliveryDateText);
+
+                if (deliveryBigestInteger.HasValue)
+                {
+                    if (deliveryBigestInteger.Value > biggestAmountDays)
+                    {
+                        biggestAmountDays = deliveryBigestInteger.Value;
+                        deliveryDate = deliveryDateItem;
+                        orderItem = item;
+                    }
+                }
+            }
+
+
+            return deliveryDate;
+        }
+        [NonAction]
+        private int? GetBiggestInteger(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return null;
+            }
+
+            var integerResultsList = new List<int>();
+            string integerSituation = string.Empty;
+            int integerPosition = 0;
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (int.TryParse(text[i].ToString(), out integerPosition))
+                {
+                    integerSituation += text[i].ToString();
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(integerSituation))
+                    {
+                        integerResultsList.Add(int.Parse(integerSituation));
+                        integerSituation = string.Empty;
+                    }
+                }
+            }
+
+            int integerResult = 0;
+            foreach (var item in integerResultsList)
+            {
+                if (item > integerResult)
+                    integerResult = item;
+            }
+
+
+            return integerResult;
+        }
+
+       
 
         [NonAction]
         private string GetPaymentDescription(Transaction transactionPagSeguro)
@@ -295,7 +437,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
 
             [NonAction]
             //Adiciona anotaçoes ao pedido
-            private void AddOrderNote(string note, bool showNoteToCustomer, ref Order order)
+            private void AddOrderNote(string note, bool showNoteToCustomer, ref Order order, bool sendEmail = false)
             {
                 OrderNote orderNote = new OrderNote();
                 orderNote.CreatedOnUtc = DateTime.UtcNow;
@@ -303,7 +445,44 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                 orderNote.Note = note;
                 order.OrderNotes.Add(orderNote);
 
-                this._orderService.UpdateOrder(order);
+            _orderService.UpdateOrder(order);
+
+            //new order notification
+            if (sendEmail)
+            {
+                //email
+                _workflowMessageService.SendNewOrderNoteAddedCustomerNotification(
+                    orderNote, _workContext.WorkingLanguage.Id);
             }
+        }
     }
+
+    public static class DateTimeExtensions
+    {
+        public static DateTime AddWorkDays(this DateTime date, int workingDays)
+        {
+            return date.GetDates(workingDays < 0)
+                .Where(newDate =>
+                    (newDate.DayOfWeek != DayOfWeek.Saturday &&
+                     newDate.DayOfWeek != DayOfWeek.Sunday &&
+                     !newDate.IsHoliday()))
+                .Take(Math.Abs(workingDays))
+                .Last();
+        }
+
+        private static IEnumerable<DateTime> GetDates(this DateTime date, bool isForward)
+        {
+            while (true)
+            {
+                date = date.AddDays(isForward ? -1 : 1);
+                yield return date;
+            }
+        }
+
+        public static bool IsHoliday(this DateTime date)
+        {
+            return false;
+        }
+    }
+
 }

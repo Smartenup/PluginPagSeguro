@@ -7,53 +7,70 @@
 @Html.Action("StoreScopeConfiguration", "Setting", new { area = "Admin" })
 
 @using (Html.BeginForm())
-{
+{ 
     @Html.AntiForgeryToken()
-    <fieldset>
-        <legend>Instruções de configuração</legend>
+    <div class="panel-group">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <fieldset name="InstrucaoConfiguracao">
+                    <legend>Instruções de configuração</legend>
 
-        1. Crie uma conta no PagSeguro<br />
-        2. Digite no campo Email abaixo, o email cadastrado no PagSeguro<br />
+                    1. Crie uma conta no PagSeguro<br />
+                    2. Digite no campo Email abaixo, o email cadastrado no PagSeguro<br />
 
-        <p>No site do PagSeguro faça as seguintes configurações:</p>
-        1. Menu Integrações > Página de redirecionamento > Selecione a opação A (Página fixa de redirecionamento) e informe a URL http://www.SuaLoja.com.br/customer/history <br />
-        2. Menu Integrações > Token de segurança > Clique no botão "Gerar novo token" e digite no campo "Token de segurança" abaixo o token gerado<br />
-        3. Menu Integrações > Pagamento via API > Selecione Ativado e clique no botão "Salvar"<br />
-        4. Menu Integrações > Notificação de transações > Selecione Ativado e informe o endereço http://www.SuaLoja.com.br/Plugins/PaymentPagSeguro/PaymentReturn <br />
-        5. Menu Integrações > Retorno automático de dados > Selecione Ativado e informe o endereço http://www.SuaLoja.com.br/Plugins/PaymentPagSeguro/PaymentReturn <br />
 
-        <p>Configurações de endereço, são campos customizados para o cliente: </p>
-        1. Configurações > Cliente > Address form fields <br />
-        2. Adicionar campo novo > Name = Número | Control Type = Caixa de texto | Required = true | Display order = 0 <br />
-        3. Adicionar campo novo > Name = Complemento | Control Type = Caixa de texto | Required = false | Display order = 1 <br />
+                    <p>No site do PagSeguro faça as seguintes configurações:</p>
+                    1. Menu Integrações > Página de redirecionamento > Selecione a opação A (Página fixa de redirecionamento) e informe a URL http://www.SuaLoja.com.br/customer/history <br />
+                    2. Menu Integrações > Token de segurança > Clique no botão "Gerar novo token" e digite no campo "Token de segurança" abaixo o token gerado<br />
+                    3. Menu Integrações > Pagamento via API > Selecione Ativado e clique no botão "Salvar"<br />
+                    4. Menu Integrações > Notificação de transações > Selecione Ativado e informe o endereço http://www.SuaLoja.com.br/Plugins/PaymentPagSeguro/PaymentReturn <br />
+                    5. Menu Integrações > Retorno automático de dados > Selecione Ativado e informe o endereço http://www.SuaLoja.com.br/Plugins/PaymentPagSeguro/PaymentReturn <br />
 
-        <p>Você está pronto para começar a vender via PagSeguro!</p>
-    </fieldset>
-    <br />
-    <table class="adminContent" style="width: 800px">
-        <tr>
-            <td class="adminTitle">
-                Email:
-            </td>
-            <td class="adminData">
-                @Html.EditorFor(model => model.Email)
-            </td>
-        </tr>
-        <tr>
-            <td class="adminTitle">
-                Token de segurança
-            </td>
-            <td class="adminData">
-                @Html.EditorFor(model => model.Token)
-            </td>
-        </tr>
-    </table>
-    <p>
-        ** Em caso de dúvidas, problemas ou sugestões, entre em contato comigo: <a href="mailto:pedrousinskas@smartenup.com.br">
-            pedrousinskas@smartenup.com.br</a></p>
-    <br />
-    <p>
-        <button type="submit" name="save" value="save" class="t-button">
-            @T("Admin.Common.Save")</button>
-    </p>
+                    <p>Configurações de endereço, são campos customizados para o cliente: </p>
+                    1. Configurações > Cliente > Address form fields <br />
+                    2. Adicionar campo novo > Name = Número | Control Type = Caixa de texto | Required = true | Display order = 0 <br />
+                    3. Adicionar campo novo > Name = Complemento | Control Type = Caixa de texto | Required = false | Display order = 1 <br />
+
+                    <p>Você está pronto para começar a vender via PagSeguro!</p>
+                </fieldset>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        @Html.LabelFor(model => model.Email)
+                    </div>
+                    <div class="col-md-9">
+                        @Html.EditorFor(model => model.Email)
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        @Html.LabelFor(model => model.Token)
+                    </div>
+                    <div class="col-md-9">
+                        @Html.EditorFor(model => model.Token)
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        @Html.LabelFor(model => model.AdicionarNotaPrazoFabricaoEnvio)
+                    </div>
+                    <div class="col-md-9">
+                        @Html.EditorFor(model => model.AdicionarNotaPrazoFabricaoEnvio)
+                    </div>
+                </div>
+                <p>
+                    ** Em caso de dúvidas, problemas ou sugestões, entre em contato com: <a href="mailto:pedrousinskas@smartenup.com.br">
+                        pedrousinskas@smartenup.com.br
+                    </a>
+                </p>
+                    <div class="form-group">
+                        <div class="col-md-3">
+                            &nbsp;
+                        </div>
+                        <div class="col-md-9">
+                            <input type="submit" name="save" class="btn bg-blue" value="@T("Admin.Common.Save")" />
+                        </div>
+                    </div>
+            </div>
+        </div>
+    </div>
 }
