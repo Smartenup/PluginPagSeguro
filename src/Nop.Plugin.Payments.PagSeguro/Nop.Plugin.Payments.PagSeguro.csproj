@@ -22,7 +22,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\..\nopCommerce_3.8_Source_20161128\Presentation\Nop.Web\Plugins\Payments.PagSeguro\</OutputPath>
+    <OutputPath>..\..\..\..\..\..\Source\Repos\nopCommerce_03_09_SU\Presentation\Nop.Web\Plugins\Payments.PagSeguro\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>

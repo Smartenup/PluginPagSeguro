@@ -213,7 +213,6 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
 
                 string paymentMethodType = GetPaymentDescription(transactionPagSeguro);
 
-
                 switch (transactionPagSeguro.TransactionStatus)
                 {
                     //Código de status - Significado
@@ -236,13 +235,22 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                         AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref order);
                         break;
                     case 3:
-                        order.PaymentStatus = PaymentStatus.Authorized;
-                        _orderProcessingService.MarkAsAuthorized(order);
-                        AddOrderNote("Pagamento aprovado.", true, ref order);
-                        AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref order);
-                        AddOrderNote("Aguardando Impressão - Excluir esse comentário ao imprimir ", false, ref order);
-                        if (_pagSeguroPaymentSettings.AdicionarNotaPrazoFabricaoEnvio)
-                            AddOrderNote(GetOrdeNoteRecievedPayment(order), true, ref order, true);
+                        if (order.PaymentStatus == PaymentStatus.Pending)
+                        {
+                            order.PaymentStatus = PaymentStatus.Authorized;
+                            _orderProcessingService.MarkAsAuthorized(order);
+                            AddOrderNote("Pagamento aprovado.", true, ref order);
+                            AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref order);
+                            AddOrderNote("Aguardando Impressão - Excluir esse comentário ao imprimir ", false, ref order);
+                            if (_pagSeguroPaymentSettings.AdicionarNotaPrazoFabricaoEnvio)
+                                AddOrderNote(GetOrdeNoteRecievedPayment(order), true, ref order, true);
+                        }
+                        else if ((order.PaymentStatus == PaymentStatus.Voided))
+                        {
+                            order.PaymentStatus = PaymentStatus.Authorized;
+                            _orderService.UpdateOrder(order);
+                            AddOrderNote("Disputa fechada em favor do vendedor.", false, ref order, false);
+                        }
                         break;
                     case 4:
                         _orderProcessingService.MarkOrderAsPaid(order);
@@ -305,7 +313,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
             str.AppendLine();
 
 
-            str.AppendFormat("Data máxima para postar nos correios: {0}", dateShipment.ToString("dd/MM/yyyy"));
+            str.AppendFormat("Data máxima para postar nos correios: {0}", dateShipment.ToString("D"));
             str.AppendLine();
 
             if (order.ShippingMethod.Contains("PAC") || order.ShippingMethod.Contains("SEDEX"))
