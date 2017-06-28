@@ -389,7 +389,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
             str.AppendLine();
 
 
-            str.AppendFormat("Data máxima para postar nos correios: {0}", dateShipment.ToString("D"));
+            str.AppendFormat("Data máxima para postar nos correios: {0}", dateShipment.ToString("dd/MM/yyyy"));
             str.AppendLine();
 
             if (order.ShippingMethod.Contains("PAC") || order.ShippingMethod.Contains("SEDEX"))

@@ -31,7 +31,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\..\..\nopCommerce_3.8_Source_20161128\Presentation\Nop.Web\Plugins\Payments.PagSeguro\</OutputPath>
+    <OutputPath>..\..\..\nop_3.8_20161128\Presentation\Nop.Web\Plugins\Payments.PagSeguro\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
