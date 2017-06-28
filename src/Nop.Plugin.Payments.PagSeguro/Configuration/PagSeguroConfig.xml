@@ -95,21 +95,21 @@
   <!-- user's credential -->
   <Credential>
     <!-- your email here -->
-    <Email>backoffice@lojamodelo.com.br</Email>
+    <Email></Email>
     <!-- your token here -->
-    <Token>256422BF9E66458CA3FE41189AD1C94A</Token>
+    <Token></Token>
     <!-- your sandbox email here -->
-    <SandboxEmail>backoffice@lojamodelo.com.br</SandboxEmail>
+    <SandboxEmail></SandboxEmail>
     <!-- your sandbox token here -->
-    <SandboxToken>256422BF9E66458CA3FE41189AD1C94A</SandboxToken>
+    <SandboxToken></SandboxToken>
     <!-- your appId here -->
-    <AppId>app8888888888</AppId>
+    <AppId></AppId>
     <!-- your appKey here -->
-    <AppKey>82EBFA59F1F1469FF47B3FBB8D2526BC</AppKey>
+    <AppKey></AppKey>
     <!-- your sandbox appId here -->
-    <SandboxAppId>app8888888888</SandboxAppId>
+    <SandboxAppId></SandboxAppId>
     <!-- your sandbox appKey here -->
-    <SandboxAppKey>82EBFA59F1F1469FF47B3FBB8D2526BC</SandboxAppKey>
+    <SandboxAppKey></SandboxAppKey>
   </Credential>
   <!-- configuration default for PagSeguro API-->
   <Configuration>

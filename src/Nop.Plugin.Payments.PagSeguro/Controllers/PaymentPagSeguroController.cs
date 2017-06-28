@@ -250,8 +250,8 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                         else if ((order.PaymentStatus == PaymentStatus.Voided))
                         {
                             order.PaymentStatus = PaymentStatus.Authorized;
-                            _orderService.UpdateOrder(order);
-                            AddOrderNote("Disputa fechada em favor do vendedor.", false, ref order, false);
+                            _orderProcessingService.MarkAsAuthorized(order);
+                            AddOrderNote("Disputa encerrada em favor do vendedor. Pagamento aprovado", true, ref order, true);
                         }
                         break;
                     case 4:
