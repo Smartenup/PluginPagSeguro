@@ -13,5 +13,8 @@ namespace Nop.Plugin.Payments.PagSeguro.Models
 
         [NopResourceDisplayName("Plugins.Payments.PagSeguro.Fields.AdicionarNotaPrazoFabricaoEnvio")]
         public bool AdicionarNotaPrazoFabricaoEnvio { get; set; }
+
+        [NopResourceDisplayName("Plugins.Payments.PagSeguro.Fields.UtilizarAmbienteSandBox")]
+        public bool UtilizarAmbienteSandBox { get; set; }
     }
 }

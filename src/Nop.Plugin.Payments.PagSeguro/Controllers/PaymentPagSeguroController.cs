@@ -77,9 +77,11 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
 
 
             var model = new ConfigurationModel();
+
             model.Email = pagSeguroPaymentSettings.Email;
             model.Token = pagSeguroPaymentSettings.Token;
             model.AdicionarNotaPrazoFabricaoEnvio = pagSeguroPaymentSettings.AdicionarNotaPrazoFabricaoEnvio;
+            model.UtilizarAmbienteSandBox = pagSeguroPaymentSettings.UtilizarAmbienteSandBox;
 
             return View("~/Plugins/Payments.PagSeguro/Views/PaymentPagSeguro/Configure.cshtml", model);
             
@@ -103,6 +105,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
             pagSeguroPaymentSettings.Email = model.Email;
             pagSeguroPaymentSettings.Token = model.Token;
             pagSeguroPaymentSettings.AdicionarNotaPrazoFabricaoEnvio = model.AdicionarNotaPrazoFabricaoEnvio;
+            pagSeguroPaymentSettings.UtilizarAmbienteSandBox = model.UtilizarAmbienteSandBox;
 
             _settingService.SaveSetting(pagSeguroPaymentSettings);
 
@@ -157,18 +160,17 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                 else
                     _logger.Information("PagSeguro - NotificationCode:" + notificationCode);
 
+                ConfigurarAmbienteExecucao();
 
                 //Monta as credenciais
                 var email = _pagSeguroPaymentSettings.Email;
                 var token = _pagSeguroPaymentSettings.Token;
 
-                PagSeguroConfiguration.UrlXmlConfiguration = HttpRuntime.AppDomainAppPath + "\\Plugins\\Payments.PagSeguro\\Configuration\\PagSeguroConfig.xml";
-
-                AccountCredentials credentials = new AccountCredentials(email, token);
+                var credentials = new AccountCredentials(email, token);
 
                 Order order = null;
 
-                StringBuilder transactionMessage = new StringBuilder();
+                var transactionMessage = new StringBuilder();
                 Transaction transactionPagSeguro = null;
 
                 try
@@ -179,7 +181,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                     transactionMessage.AppendFormat("Status: {0} ", transactionPagSeguro.TransactionStatus);
                     transactionMessage.AppendFormat("Pagamento Método: {0} ", transactionPagSeguro.PaymentMethod.PaymentMethodType);
                     transactionMessage.AppendFormat("Referencia: {0} ", transactionPagSeguro.Reference);
-                    
+
 
                     _logger.Information(transactionMessage.ToString());
                 }
@@ -289,11 +291,85 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
             return new HttpStatusCodeResult(HttpStatusCode.OK); ;
         }
 
+        [ValidateInput(false)]
+        public ActionResult RedirectOrder()
+        {
+            string transactionId = Request["transaction_id"];
+
+            //Valida os dados recebidos e loga info
+            if (string.IsNullOrEmpty(transactionId))
+            {
+                _logger.Error("Transaction Id PagSeguro recebida vazia. Abortando método RedirectOrder");
+
+                return new HttpStatusCodeResult(HttpStatusCode.InternalServerError);
+            }
+            else
+                _logger.Information("PagSeguro - transactionId:" + transactionId);
+
+            ConfigurarAmbienteExecucao();
+
+            //Monta as credenciais
+            var email = _pagSeguroPaymentSettings.Email;
+            var token = _pagSeguroPaymentSettings.Token;
+
+            var credentials = new AccountCredentials(email, token);
+
+            Order order = null;
+
+            var transactionMessage = new StringBuilder();
+            Transaction transaction = null;
+
+            try
+            {
+                transaction = TransactionSearchService.SearchByCode(credentials, transactionId);
+
+                _logger.Information(transactionMessage.ToString());
+            }
+            catch (PagSeguroServiceException ex)
+            {
+                transactionMessage.AppendFormat("PagSeguro erro {0}", ex.Message);
+
+                foreach (var item in ex.Errors)
+                {
+                    transactionMessage.AppendFormat("{0}-{1}", item.Code, item.Message);
+                }
+
+                _logger.Error(transactionMessage.ToString(), ex);
+
+                return new HttpStatusCodeResult(HttpStatusCode.InternalServerError);
+            }
+
+            //Transacao do pagseguro encontrada, portanto vamos achar o pedido               
+            if (transaction.Reference.Length == 36)
+                order = _orderService.GetOrderByGuid(new Guid(transaction.Reference));
+            else
+                order = _orderService.GetOrderById(int.Parse(transaction.Reference));
+
+
+            if (order == null)
+            {
+                _logger.Information("Pedido não encontrado. Abortando. Pedido: " + transaction.Reference);
+
+                return new HttpStatusCodeResult(HttpStatusCode.InternalServerError);
+            }
+
+
+            return RedirectToRoute("CheckoutCompleted", new { orderId = order.Id });
+
+        }
+
+        private void ConfigurarAmbienteExecucao()
+        {
+            PagSeguroConfiguration.UrlXmlConfiguration = HttpRuntime.AppDomainAppPath + 
+                "\\Plugins\\Payments.PagSeguro\\Configuration\\PagSeguroConfig.xml";
+
+            EnvironmentConfiguration.ChangeEnvironment(_pagSeguroPaymentSettings.UtilizarAmbienteSandBox);
+        }
 
         [NonAction]
-        private string GetOrdeNoteRecievedPayment(Nop.Core.Domain.Orders.Order order)
+        private string GetOrdeNoteRecievedPayment(Order order)
         {
-            Nop.Core.Domain.Orders.OrderItem orderItem;
+            OrderItem orderItem;
             int? biggestAmountDays;
 
             DeliveryDate biggestDeliveryDate = GetBiggestDeliveryDate(order, out biggestAmountDays, out orderItem);
@@ -340,8 +416,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
         }
 
         [NonAction]
-        private DeliveryDate GetBiggestDeliveryDate(Nop.Core.Domain.Orders.Order order, out int? biggestAmountDays,
-    out Nop.Core.Domain.Orders.OrderItem orderItem)
+        private DeliveryDate GetBiggestDeliveryDate(Order order, out int? biggestAmountDays, out OrderItem orderItem)
         {
 
             DeliveryDate deliveryDate = null;

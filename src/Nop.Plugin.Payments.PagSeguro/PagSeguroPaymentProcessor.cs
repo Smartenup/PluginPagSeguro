@@ -22,6 +22,7 @@ using System.Web.Routing;
 using Uol.PagSeguro.Constants;
 using Uol.PagSeguro.Domain;
 using Uol.PagSeguro.Exception;
+using Uol.PagSeguro.Resources;
 using Address = Nop.Core.Domain.Common.Address;
 using Currency = Uol.PagSeguro.Constants.Currency;
 using PaymentMethodType = Nop.Services.Payments.PaymentMethodType;
@@ -104,7 +105,7 @@ namespace Nop.Plugin.Payments.PagSeguro
         {
             var returnToken = string.Empty;
 
-            Uol.PagSeguro.Resources.PagSeguroConfiguration.UrlXmlConfiguration = HttpRuntime.AppDomainAppPath + "\\Plugins\\Payments.PagSeguro\\Configuration\\PagSeguroConfig.xml";
+            ConfigurarAmbienteExecucao();
 
             var credentials = new AccountCredentials(_pagSeguroPaymentSettings.Email, _pagSeguroPaymentSettings.Token);
 
@@ -220,7 +221,8 @@ namespace Nop.Plugin.Payments.PagSeguro
                 payment.Sender = new Sender(GetBillingShippingFullName(postProcessPaymentRequest.Order.BillingAddress),
                     postProcessPaymentRequest.Order.Customer.Email,
                     GetPhoneNumber(postProcessPaymentRequest.Order.BillingAddress)
-                    );
+                    );                
+
                 var paymentRedirectUri = payment.Register(credentials);
 
                 if (paymentRedirectUri == null)
@@ -246,6 +248,14 @@ namespace Nop.Plugin.Payments.PagSeguro
             {
                 throw;
             }
+        }
+
+        private void ConfigurarAmbienteExecucao()
+        {
+            PagSeguroConfiguration.UrlXmlConfiguration = HttpRuntime.AppDomainAppPath +
+                "\\Plugins\\Payments.PagSeguro\\Configuration\\PagSeguroConfig.xml";
+
+            EnvironmentConfiguration.ChangeEnvironment(_pagSeguroPaymentSettings.UtilizarAmbienteSandBox);
         }
 
         public decimal GetAdditionalHandlingFee()

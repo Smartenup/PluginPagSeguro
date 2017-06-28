@@ -11,5 +11,6 @@ namespace Nop.Plugin.Payments.PagSeguro
         public string UrlPagSeguro { get; set; }
         public string UrlPagSeguroSandbox { get; set; }
         public bool AdicionarNotaPrazoFabricaoEnvio { get; set; }
+        public bool UtilizarAmbienteSandBox { get; set; }
     }
 }

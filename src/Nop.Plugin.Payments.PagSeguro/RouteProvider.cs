@@ -19,6 +19,13 @@ namespace Nop.Plugin.Payments.PagSeguro
                  new { controller = "PaymentPagSeguro", action = "PaymentReturn" },
                  new[] { "Nop.Plugin.Payments.PagSeguro.Controllers" }
             );
+
+            routes.MapRoute("Plugin.Payments.PagSeguro.RedirectOrder",
+                 "Plugins/PaymentPagSeguro/RedirectOrder",
+                 new { controller = "PaymentPagSeguro", action = "RedirectOrder" },
+                 new[] { "Nop.Plugin.Payments.PagSeguro.Controllers" }
+            );
+
         }
 
         public int Priority
