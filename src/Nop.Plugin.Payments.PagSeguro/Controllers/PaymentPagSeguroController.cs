@@ -1,7 +1,6 @@
 ﻿using Nop.Core;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Payments;
-using Nop.Core.Domain.Shipping;
 using Nop.Plugin.Payments.PagSeguro.Models;
 using Nop.Services.Configuration;
 using Nop.Services.Localization;
@@ -13,9 +12,9 @@ using Nop.Services.Shipping;
 using Nop.Services.Stores;
 using Nop.Web.Framework.Controllers;
 using Nop.Web.Framework.Security;
+using SmartenUP.Core.Services;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Web;
@@ -39,6 +38,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
         private readonly ILocalizationService _localizationService;
         private readonly IWorkflowMessageService _workflowMessageService;
         private readonly IShippingService _shippingService;
+        private readonly IOrderNoteService _orderNoteService;
 
         public PaymentPagSeguroController(IWorkContext workContext,
             IStoreService storeService, 
@@ -51,7 +51,8 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
             ILocalizationService localizationService,
             PagSeguroPaymentSettings pagSeguroPaymentSettings,
             IWorkflowMessageService workflowMessageService,
-            IShippingService shippingService)
+            IShippingService shippingService,
+            IOrderNoteService orderNoteService)
         {
             _workContext = workContext;
             _storeService = storeService;
@@ -63,6 +64,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
             _pagSeguroPaymentSettings = pagSeguroPaymentSettings;
             _workflowMessageService = workflowMessageService;
             _shippingService = shippingService;
+            _orderNoteService = orderNoteService;
 
         }
 
@@ -190,9 +192,7 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                     transactionMessage.AppendFormat("PagSeguro erro {0}", ex.Message);
 
                     foreach (var item in ex.Errors)
-                    {
                         transactionMessage.AppendFormat("{0}-{1}", item.Code, item.Message);
-                    }
 
                     _logger.Error(transactionMessage.ToString(), ex);
 
@@ -227,53 +227,66 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
                     //7	Cancelada: a transação foi cancelada sem ter sido finalizada.
 
                     case 1:
-                        order.PaymentStatus = PaymentStatus.Pending;
-                        AddOrderNote("Aguardando pagamento.", true, ref order);
-                        AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref order);
+                        _orderNoteService.AddOrderNote("Aguardando pagamento.", true, order);
+                        _orderNoteService.AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, order);
+
                         break;
                     case 2:
-                        order.PaymentStatus = PaymentStatus.Pending;
-                        AddOrderNote("Em processamento pelo PagSeguro.", true, ref order);
-                        AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref order);
+
+                        _orderNoteService.AddOrderNote("Em processamento pelo PagSeguro.", true, order);
+                        _orderNoteService.AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, order);
+
                         break;
                     case 3:
                         if (order.PaymentStatus == PaymentStatus.Pending)
                         {
                             order.PaymentStatus = PaymentStatus.Authorized;
+
                             _orderProcessingService.MarkAsAuthorized(order);
-                            AddOrderNote("Pagamento aprovado.", true, ref order);
-                            AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, ref order);
-                            AddOrderNote("Aguardando Impressão - Excluir esse comentário ao imprimir ", false, ref order);
+
+                            _orderNoteService.AddOrderNote("Pagamento aprovado.", true, order);
+                            _orderNoteService.AddOrderNote(string.Format("Forma de pagamento: {0}.", paymentMethodType), true, order);
+                            _orderNoteService.AddOrderNote("Aguardando Impressão - Excluir esse comentário ao imprimir", false, order);
+
                             if (_pagSeguroPaymentSettings.AdicionarNotaPrazoFabricaoEnvio)
-                                AddOrderNote(GetOrdeNoteRecievedPayment(order), true, ref order, true);
+                                _orderNoteService.AddOrderNote(_orderNoteService.GetOrdeNoteRecievedPayment(order, "PagSeguro"), true, order, true);
+
                         }
                         else if ((order.PaymentStatus == PaymentStatus.Voided))
                         {
                             order.PaymentStatus = PaymentStatus.Authorized;
+
                             _orderProcessingService.MarkAsAuthorized(order);
-                            AddOrderNote("Disputa encerrada em favor do vendedor. Pagamento aprovado", true, ref order, true);
+
+                            _orderNoteService.AddOrderNote("Disputa encerrada em favor do vendedor. Pagamento aprovado", true, order, true);
                         }
                         break;
                     case 4:
                         _orderProcessingService.MarkOrderAsPaid(order);
-                        AddOrderNote("Pagamento disponível para saque no PagSeguro.", false, ref order);
+                        _orderNoteService.AddOrderNote("Pagamento disponível para saque no PagSeguro.", false, order);
                         break;
                     case 5:
                         order.PaymentStatus = PaymentStatus.Voided;
                         _orderService.UpdateOrder(order);
-                        AddOrderNote("Em disputa: o comprador, dentro do prazo de liberação da transação, abriu uma disputa.", true, ref order, true);
+                        _orderNoteService.AddOrderNote("Em disputa: o comprador, dentro do prazo de liberação da transação, abriu uma disputa.", true, order, true);
                         break;
                     case 6:
                         order.PaymentStatus = PaymentStatus.Refunded;
                         order.OrderStatus = OrderStatus.Cancelled;
+
                         _orderProcessingService.CancelOrder(order, true);
-                        AddOrderNote("Valor reembolsado para o comprador. Pedido Cancelado.", true, ref order, true);
+
+                        _orderNoteService.AddOrderNote("Valor reembolsado para o comprador. Pedido Cancelado.", true, order, true);
+                        
                         break;
                     case 7:
+
                         order.PaymentStatus = PaymentStatus.Voided;
                         order.OrderStatus = OrderStatus.Cancelled;
+
                         _orderProcessingService.CancelOrder(order, true);
-                        AddOrderNote("Transação Cancelada. Motivos: Expiração do prazo de pagamento ou cancelada pelo comprador.", true, ref order);
+                        _orderNoteService.AddOrderNote("Transação Cancelada. Motivos: Expiração do prazo de pagamento ou cancelada pelo comprador.", true, order, true);
+
                         break;
                 }
 
@@ -366,127 +379,8 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
             EnvironmentConfiguration.ChangeEnvironment(_pagSeguroPaymentSettings.UtilizarAmbienteSandBox);
         }
 
-        [NonAction]
-        private string GetOrdeNoteRecievedPayment(Order order)
-        {
-            OrderItem orderItem;
-            int? biggestAmountDays;
-
-            DeliveryDate biggestDeliveryDate = GetBiggestDeliveryDate(order, out biggestAmountDays, out orderItem);
-
-            DateTime dateShipment = DateTime.Now.AddWorkDays(biggestAmountDays.Value);
-
-            var str = new StringBuilder();
-
-            str.AppendLine("Recebemos a liberação do pagamento pelo PagSeguro e será dado andamento no seu pedido.");
-            str.AppendLine();
-            str.AppendFormat("Lembramos que o maior prazo é da fabricante {0} de {1}",
-                            orderItem.Product.ProductManufacturers.FirstOrDefault().Manufacturer.Name,
-                            biggestDeliveryDate.GetLocalized(dd => dd.Name));
-            str.AppendLine();
-            str.AppendLine();
-            str.AppendLine("*OBS: Caso o seu pedido tenha produtos com prazos diferentes, o prazo de entrega a ser considerado será o maior.");
-            str.AppendLine();
-
-
-            str.AppendFormat("Data máxima para postar nos correios: {0}", dateShipment.ToString("dd/MM/yyyy"));
-            str.AppendLine();
-
-            if (order.ShippingMethod.Contains("PAC") || order.ShippingMethod.Contains("SEDEX"))
-            {
-                try
-                {
-                    var shippingOption = _shippingService.GetShippingOption(order);
-
-                    str.AppendFormat("Correios: {0} - {1} após a postagem", shippingOption.Name, shippingOption.Description);
-                    str.AppendLine();
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error("Erro no calculo do frete pela ordem", ex);
-                }
-                finally
-                {
-                    str.AppendLine();
-                }
-            }
-
-            return str.ToString();
-
-        }
-
-        [NonAction]
-        private DeliveryDate GetBiggestDeliveryDate(Order order, out int? biggestAmountDays, out OrderItem orderItem)
-        {
-
-            DeliveryDate deliveryDate = null;
-
-            biggestAmountDays = 0;
-
-            orderItem = null;
-
-            foreach (var item in order.OrderItems)
-            {
-                var deliveryDateItem = _shippingService.GetDeliveryDateById(item.Product.DeliveryDateId);
-
-                string deliveryDateText = deliveryDateItem.GetLocalized(dd => dd.Name);
-
-                int? deliveryBigestInteger = GetBiggestInteger(deliveryDateText);
-
-                if (deliveryBigestInteger.HasValue)
-                {
-                    if (deliveryBigestInteger.Value > biggestAmountDays)
-                    {
-                        biggestAmountDays = deliveryBigestInteger.Value;
-                        deliveryDate = deliveryDateItem;
-                        orderItem = item;
-                    }
-                }
-            }
-
-
-            return deliveryDate;
-        }
-        [NonAction]
-        private int? GetBiggestInteger(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return null;
-            }
-
-            var integerResultsList = new List<int>();
-            string integerSituation = string.Empty;
-            int integerPosition = 0;
-
-            for (int i = 0; i < text.Length; i++)
-            {
-                if (int.TryParse(text[i].ToString(), out integerPosition))
-                {
-                    integerSituation += text[i].ToString();
-                }
-                else
-                {
-                    if (!string.IsNullOrEmpty(integerSituation))
-                    {
-                        integerResultsList.Add(int.Parse(integerSituation));
-                        integerSituation = string.Empty;
-                    }
-                }
-            }
-
-            int integerResult = 0;
-            foreach (var item in integerResultsList)
-            {
-                if (item > integerResult)
-                    integerResult = item;
-            }
-
-
-            return integerResult;
-        }
-
-       
+        
+        
 
         [NonAction]
         private string GetPaymentDescription(Transaction transactionPagSeguro)
@@ -517,55 +411,5 @@ namespace Nop.Plugin.Payments.PagSeguro.Controllers
 
             return paymentMethodType;
         }
-
-            [NonAction]
-            //Adiciona anotaçoes ao pedido
-            private void AddOrderNote(string note, bool showNoteToCustomer, ref Order order, bool sendEmail = false)
-            {
-                OrderNote orderNote = new OrderNote();
-                orderNote.CreatedOnUtc = DateTime.UtcNow;
-                orderNote.DisplayToCustomer = showNoteToCustomer;
-                orderNote.Note = note;
-                order.OrderNotes.Add(orderNote);
-
-            _orderService.UpdateOrder(order);
-
-            //new order notification
-            if (sendEmail)
-            {
-                //email
-                _workflowMessageService.SendNewOrderNoteAddedCustomerNotification(
-                    orderNote, _workContext.WorkingLanguage.Id);
-            }
-        }
     }
-
-    public static class DateTimeExtensions
-    {
-        public static DateTime AddWorkDays(this DateTime date, int workingDays)
-        {
-            return date.GetDates(workingDays < 0)
-                .Where(newDate =>
-                    (newDate.DayOfWeek != DayOfWeek.Saturday &&
-                     newDate.DayOfWeek != DayOfWeek.Sunday &&
-                     !newDate.IsHoliday()))
-                .Take(Math.Abs(workingDays))
-                .Last();
-        }
-
-        private static IEnumerable<DateTime> GetDates(this DateTime date, bool isForward)
-        {
-            while (true)
-            {
-                date = date.AddDays(isForward ? -1 : 1);
-                yield return date;
-            }
-        }
-
-        public static bool IsHoliday(this DateTime date)
-        {
-            return false;
-        }
-    }
-
 }

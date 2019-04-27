@@ -10,9 +10,9 @@ using Nop.Services.Common;
 using Nop.Services.Configuration;
 using Nop.Services.Customers;
 using Nop.Services.Directory;
-using Nop.Services.Localization;
 using Nop.Services.Payments;
 using Nop.Services.Tax;
+using SmartenUP.Core.Util.Helper;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -201,11 +201,25 @@ namespace Nop.Plugin.Payments.PagSeguro
                 if (postProcessPaymentRequest.Order.ShippingAddressId.HasValue &&
                     postProcessPaymentRequest.Order.ShippingAddress != null)
                 {
-                    var number = string.Empty;
-                    var complement = string.Empty;
 
-                    GetCustomNumberAndComplement(postProcessPaymentRequest.Order.ShippingAddress.CustomAttributes,
-                        out number, out complement);
+                    var addressHelper = new AddressHelper(_addressAttributeParser, _workContext);
+
+
+                    string number = string.Empty;
+                    string complement = string.Empty;
+                    string cnpjcpf = string.Empty;
+
+                    addressHelper.GetCustomNumberAndComplement(postProcessPaymentRequest.Order.BillingAddress.CustomAttributes,
+                        out number, out complement, out cnpjcpf);
+
+                    if (string.IsNullOrWhiteSpace(number))
+                        number = "--";
+
+                    if (string.IsNullOrWhiteSpace(complement))
+                        complement = "--";
+
+                    if (complement.Length > 40)
+                        complement = complement.Substring(0, 39);
 
                     payment.Shipping.Address = new Uol.PagSeguro.Domain.Address("BRA",
                         postProcessPaymentRequest.Order.ShippingAddress.StateProvince.Abbreviation,
@@ -403,43 +417,7 @@ namespace Nop.Plugin.Payments.PagSeguro
 
         #region Metodos Privados
 
-        private void GetCustomNumberAndComplement(string customAttributes, out string number, out string complement)
-        {
-            number = string.Empty;
-            complement = string.Empty;
-
-            if (!string.IsNullOrWhiteSpace(customAttributes))
-            {
-                var attributes = _addressAttributeParser.ParseAddressAttributes(customAttributes);
-
-                for (var i = 0; i < attributes.Count; i++)
-                {
-                    var valuesStr = _addressAttributeParser.ParseValues(customAttributes, attributes[i].Id);
-
-                    var attributeName = attributes[i].GetLocalized(a => a.Name, _workContext.WorkingLanguage.Id);
-
-                    if (
-                        attributeName.Equals("Número", StringComparison.InvariantCultureIgnoreCase) ||
-                        attributeName.Equals("Numero", StringComparison.InvariantCultureIgnoreCase)
-                        )
-                    {
-                        number = _addressAttributeParser.ParseValues(customAttributes, attributes[i].Id)[0];
-                    }
-
-                    if (attributeName.Equals("Complemento", StringComparison.InvariantCultureIgnoreCase))
-                        complement = _addressAttributeParser.ParseValues(customAttributes, attributes[i].Id)[0];
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(number))
-                number = "--";
-
-            if (string.IsNullOrWhiteSpace(complement))
-                complement = "--";
-
-            if (complement.Length > 40)
-                complement = complement.Substring(0, 39);
-        }
+       
 
         private string EnsureStreet(string street)
         {
